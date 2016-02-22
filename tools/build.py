@@ -18,7 +18,7 @@ BIN_DIR = ROOT_DIR + '\\tools\\bin'
 
 def download_ffmpeg():
     from sys import stderr
-    print >>stderr, '--- download_ffmpeg ---\n'
+    #print >>stderr, '--- download_ffmpeg ---\n'
 
     from scripts import download_ffmpeg
     download_ffmpeg.TMP_DIR = TMP_DIR + '\\download_ffmpeg'
@@ -50,7 +50,7 @@ def download_ffmpeg():
 
 def msbuild():
     from sys import stderr
-    print >>stderr, '--- msbuild ---\n'
+    #print >>stderr, '--- msbuild ---\n'
 
     from scripts import msbuild
     msbuild.TMP_DIR = TMP_DIR + '\\msbuild'
@@ -71,7 +71,7 @@ def msbuild():
 
 def dist():
     from sys import stderr
-    print >>stderr, '--- dist ---\n'
+    #print >>stderr, '--- dist ---\n'
 
     from scripts import dist
     dist.TMP_DIR = TMP_DIR + '\\dist'
@@ -116,7 +116,7 @@ def dist():
 
 def upload():
     from sys import stderr
-    print >>stderr, '--- upload ---\n'
+    #print >>stderr, '--- upload ---\n'
 
     from scripts import upload
     upload.TMP_DIR = TMP_DIR + '\\upload'
@@ -136,7 +136,7 @@ def upload():
 if __name__=='__main__':
     from sys import stderr
 
-    print >>stderr, '=== SCFF-DirectShow-Filter Build Script ===\n'
+    #print >>stderr, '=== SCFF-DirectShow-Filter Build Script ===\n'
 
     # download_ffmpeg.py
     if 'download_ffmpeg' in OPTIONS:

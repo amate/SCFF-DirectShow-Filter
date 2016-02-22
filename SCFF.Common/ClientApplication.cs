@@ -321,67 +321,90 @@ public class ClientApplication {
     return true;
   }
 
-  /// Profileの共有メモリへの書き込み
-  public bool SendProfile(bool quiet, bool forceNullLayout) {
-    // 送る先のプロセスが存在しているか
-    var processID = this.RuntimeOptions.CurrentProcessID;
-    if (!Utilities.IsProcessAlive(processID)) {
-      // Event: ErrorOccured
-      {
-        var header = "Couldn't send the profile to shared memory: ";
-        var message = header + "\n  - Couldn't find process: " + processID;
-        var args = new ErrorOccuredEventArgs(message, quiet);
-        var handler = this.OnErrorOccured;
-        if (handler != null) handler(this, args);
-      }
-      // モニターを解除
-      this.DSFMonitor.RemoveZombie(processID);
-      return false;
-    }
-
-    // 検証
-    if (!forceNullLayout) {
-      var errors = this.ValidateProfileInternal();
-      if (!errors.IsNoError) {
-        // Event: ErrorOccured
-        {
-          var header = "Couldn't send the profile to shared memory: ";
-          var message = errors.ToErrorMessage(header);
-          var args = new ErrorOccuredEventArgs(message, quiet);
-          var handler = this.OnErrorOccured;
-          if (handler != null) handler(this, args);
-        }
-        return false;
-      }
-    }
-    // 共有メモリに書き込み
-    var success = this.SendProfileInternal(forceNullLayout);
-    if (!success) {
-      // Event: ErrorOccured
-      { 
-        var header = "Couldn't send the profile to shared memory: ";
-        var message = header + "\n  - Couldn't access shared memory.";
-        var args = new ErrorOccuredEventArgs(message, quiet);
-        var handler = this.OnErrorOccured;
-        if (handler != null) handler(this, args);
-      }
-      return false;
-    }
-
-    // DSFエラー監視開始
-    this.DSFMonitor.Start(this.RuntimeOptions.CurrentProcessID);
-
-    // Event: ProfileSent
+    /// Profileの共有メモリへの書き込み
+    public bool SendProfile(bool quiet, bool forceNullLayout)
     {
-      var handler = this.OnProfileSent;
-      if (handler != null) handler(this, EventArgs.Empty);
+        Func<bool, bool, bool> sendprofile = (quiet1, forceNullLayout1) =>
+        {
+            // 送る先のプロセスが存在しているか
+            var processID = this.RuntimeOptions.CurrentProcessID;
+            if (!Utilities.IsProcessAlive(processID))
+            {
+                // Event: ErrorOccured
+                {
+                    var header = "Couldn't send the profile to shared memory: ";
+                    var message = header + "\n  - Couldn't find process: " + processID;
+                    var args = new ErrorOccuredEventArgs(message, quiet);
+                    var handler = this.OnErrorOccured;
+                    if (handler != null) handler(this, args);
+                }
+                // モニターを解除
+                this.DSFMonitor.RemoveZombie(processID);
+                return false;
+            }
+
+            // 検証
+            if (!forceNullLayout)
+            {
+                var errors = this.ValidateProfileInternal();
+                if (!errors.IsNoError)
+                {
+                    // Event: ErrorOccured
+                    {
+                        var header = "Couldn't send the profile to shared memory: ";
+                        var message = errors.ToErrorMessage(header);
+                        var args = new ErrorOccuredEventArgs(message, quiet);
+                        var handler = this.OnErrorOccured;
+                        if (handler != null) handler(this, args);
+                    }
+                    return false;
+                }
+            }
+            // 共有メモリに書き込み
+            var success = this.SendProfileInternal(forceNullLayout);
+            if (!success)
+            {
+                // Event: ErrorOccured
+                {
+                    var header = "Couldn't send the profile to shared memory: ";
+                    var message = header + "\n  - Couldn't access shared memory.";
+                    var args = new ErrorOccuredEventArgs(message, quiet);
+                    var handler = this.OnErrorOccured;
+                    if (handler != null) handler(this, args);
+                }
+                return false;
+            }
+
+            // DSFエラー監視開始
+            this.DSFMonitor.Start(this.RuntimeOptions.CurrentProcessID);
+
+            // Event: ProfileSent
+            {
+                var handler = this.OnProfileSent;
+                if (handler != null) handler(this, EventArgs.Empty);
+            }
+
+            return true;
+        };
+
+        bool ret = true;
+        uint lastCurrentProcessId = RuntimeOptions.CurrentProcessID;
+        foreach (var entry in this.RuntimeOptions.EntryLabels)
+        {
+                if (entry.Key != lastCurrentProcessId) {
+                    RuntimeOptions.CurrentProcessID = entry.Key;
+                    if (sendprofile(quiet, forceNullLayout) == false)
+                        ret = false;
+                }
+        }
+        RuntimeOptions.CurrentProcessID = lastCurrentProcessId;
+        if (sendprofile(quiet, forceNullLayout) == false)
+            ret = false;
+        return ret;
     }
 
-    return true;
-  }
-
-  /// Directoryを更新し、DSFMonitorからゾンビTaskを消去する
-  public void RefreshDirectory() {
+        /// Directoryを更新し、DSFMonitorからゾンビTaskを消去する
+        public void RefreshDirectory() {
     this.RuntimeOptions.RefreshDirectory(this.Interprocess);
     this.DSFMonitor.RemoveZombies();
 

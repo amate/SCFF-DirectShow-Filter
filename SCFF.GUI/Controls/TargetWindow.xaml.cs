@@ -54,6 +54,8 @@ public partial class TargetWindow : UserControl, IBindingProfile {
     switch (nextWindowType) {
       case WindowTypes.Normal: {
         App.Profile.Current.SetWindow(nextTargetWindow);
+        OnDragHereSetTargetWindow(nextTargetWindow, EventArgs.Empty);
+        return;
         break;
       }
       case WindowTypes.DXGI: {
@@ -66,9 +68,12 @@ public partial class TargetWindow : UserControl, IBindingProfile {
       }
       default: Debug.Fail("switch"); throw new System.ArgumentException();
     }
+    OnDragHereSetTargetWindow(null, EventArgs.Empty);
     App.Profile.Current.Fit = true;
     App.Profile.Current.ClearBackupParameters();
     App.Profile.Close();
+
+ 
 
     //-----------------------------------------------------------------
     // Notify self
@@ -237,5 +242,7 @@ public partial class TargetWindow : UserControl, IBindingProfile {
   private UIntPtr currentTargetWindow;
   /// 現在のマウスカーソル上のWindowハンドルのDC
   private IntPtr currentTargetDC;
+
+  public EventHandler OnDragHereSetTargetWindow;
 }
 }   // namespace SCFF.GUI.Controls

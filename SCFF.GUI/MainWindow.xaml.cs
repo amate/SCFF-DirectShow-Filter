@@ -20,17 +20,18 @@
 
 namespace SCFF.GUI {
 
-using System;
-using System.Diagnostics;
-using System.Windows;
-using System.Windows.Input;
-using Microsoft.Win32;
-using Microsoft.Windows.Shell;
-using SCFF.Common;
-using SCFF.Common.GUI;
-
-/// MainWindowのコードビハインド
-public partial class MainWindow
+    using System;
+    using System.Diagnostics;
+    using System.Windows;
+    using System.Windows.Input;
+    using Microsoft.Win32;
+    using Microsoft.Windows.Shell;
+    using SCFF.Common;
+    using SCFF.Common.GUI;
+    using System.Text;
+    using Common.Ext;
+    using System.Threading;/// MainWindowのコードビハインド
+    public partial class MainWindow
     : Window, IBindingProfile, IBindingOptions, IBindingRuntimeOptions {
   //===================================================================
   // コンストラクタ/Dispose/デストラクタ
@@ -56,6 +57,9 @@ public partial class MainWindow
     App.Impl.OnCurrentEntryChanged += this.OnCurrentEntryChanged;
 
     App.ScreenCaptureTimer.Tick += LayoutEdit.OnScreenCaptured;
+
+    TargetWindow.OnDragHereSetTargetWindow += this.OnDragHereSetTargetWindow;
+    Area.OnDragHereSetTargetWindow += this.OnDragHereSetTargetWindow;
 
     this.NotifyOptionsChanged();
     this.NotifyRuntimeOptionsChanged();
@@ -821,5 +825,97 @@ public partial class MainWindow
     this.FixSize();
     this.FixExpanders();
   }
-}
+
+    private void OnDragHereSetTargetWindow(object sender, EventArgs e)
+    {
+        if (sender == null) {
+            if (targetWindowWatchingTimer != null) {
+                targetWindowWatchingTimer.Dispose();
+                targetWindowWatchingTimer = null;
+                targetWindow = UIntPtr.Zero;
+            }
+            this.TargetWindow.WindowCaption.Text = "(Desktop)";
+
+         } else {
+            UIntPtr window = (UIntPtr)sender;
+            targetWindow = window;
+            // サイズ
+            App.Profile.Current.Fit = true;
+            var nextScreenRect = App.Profile.Current.ScreenClippingRectWithFit;
+            lastTargetWindowRect = nextScreenRect;
+
+            // Profile更新
+            App.Profile.Open();
+            App.Profile.Current.SetWindowToDesktop();
+            App.Profile.Current.SetClippingRectByScreenRect(nextScreenRect);
+            App.Profile.Current.ClearBackupParameters();
+            App.Profile.Close();
+
+            this.Area.OnCurrentLayoutElementChanged();
+            Commands.TargetWindowChanged.Execute(null, this.Area);
+
+
+            var windowCaption = "n/a";
+            if (Common.Utilities.IsWindowValid(window))
+            {
+                StringBuilder className = new StringBuilder(256);
+                User32.GetClassName(window, className, 256);
+                windowCaption = className.ToString();
+            }
+            this.TargetWindow.WindowCaption.Text = "(Desktop) " + windowCaption;
+
+            var context = SynchronizationContext.Current; // UIThread
+            targetWindowWatchingTimer = new Timer((state) =>
+            {
+                var context2 = state as SynchronizationContext;
+                context2.Post(this.TargetWindowWatchingCallback, null);
+            }, context, 0, 1000);
+        }
+    }
+
+    private void TargetWindowWatchingCallback(object state)
+    {
+       if (Common.Utilities.IsWindowValid(targetWindow) == false) {
+            if (targetWindowWatchingTimer != null) {
+                targetWindowWatchingTimer.Dispose();
+                targetWindowWatchingTimer = null;
+                targetWindow = UIntPtr.Zero;
+            }
+            return;
+       }
+       // サイズ
+       App.Profile.Current.Fit = true;
+       App.Profile.Current.SetWindow(targetWindow);
+       var nextScreenRect = App.Profile.Current.ScreenClippingRectWithFit;
+        if (lastTargetWindowRect.X != nextScreenRect.X || lastTargetWindowRect.Y != nextScreenRect.Y
+                    || lastTargetWindowRect.Height != nextScreenRect.Height
+                    || lastTargetWindowRect.Width != nextScreenRect.Width)
+        {
+            lastTargetWindowRect = nextScreenRect;
+            // Profile更新
+            App.Profile.Open();
+            App.Profile.Current.SetWindowToDesktop();
+            App.Profile.Current.SetClippingRectByScreenRect(nextScreenRect);
+            App.Profile.Current.ClearBackupParameters();
+            App.Profile.Close();
+
+            this.Area.OnCurrentLayoutElementChanged();
+            Commands.TargetWindowChanged.Execute(null, this.Area);
+
+            var windowCaption = "n/a";
+            StringBuilder className = new StringBuilder(256);
+            User32.GetClassName(targetWindow, className, 256);
+            windowCaption = className.ToString();
+            this.TargetWindow.WindowCaption.Text = "(Desktop) " + windowCaption;
+        }
+        else {
+            App.Profile.Current.SetWindowToDesktop();
+            App.Profile.Current.SetClippingRectByScreenRect(nextScreenRect);
+        }
+    }
+
+    private UIntPtr targetWindow;
+    private Timer targetWindowWatchingTimer;
+    private ScreenRect lastTargetWindowRect;
+  }
 }   // namespace SCFF.GUI

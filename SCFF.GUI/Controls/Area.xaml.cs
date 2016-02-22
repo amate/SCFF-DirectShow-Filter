@@ -20,19 +20,19 @@
 
 namespace SCFF.GUI.Controls {
 
-using System.Diagnostics;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
-using SCFF.Common;
-using SCFF.Common.GUI;
-using SCFF.Common.Profile;
-/// @copydoc SCFF::Common::Profile::ClippingInputCorrector::Names
-using Clipping = SCFF.Common.Profile.ClippingInputCorrector.Names;
-
-/// クリッピング領域設定用UserControl
-public partial class Area : UserControl, IBindingProfile {
+    using System.Diagnostics;
+    using System.Windows;
+    using System.Windows.Controls;
+    using System.Windows.Input;
+    using System.Windows.Media;
+    using SCFF.Common;
+    using SCFF.Common.GUI;
+    using SCFF.Common.Profile;
+    /// @copydoc SCFF::Common::Profile::ClippingInputCorrector::Names
+    using Clipping = SCFF.Common.Profile.ClippingInputCorrector.Names;
+    using System;
+    /// クリッピング領域設定用UserControl
+    public partial class Area : UserControl, IBindingProfile {
   //===================================================================
   // コンストラクタ/Dispose/デストラクタ
   //===================================================================
@@ -298,6 +298,9 @@ public partial class Area : UserControl, IBindingProfile {
   /// 現在編集中のレイアウト要素のクリッピング領域/Fitオプションを変更する
   private void CommonAreaSelect(bool changeWindowType = false,
                                 WindowTypes nextWindowType = WindowTypes.Normal) {
+
+    OnDragHereSetTargetWindow(null, EventArgs.Empty);
+
     if (!App.Profile.Current.IsWindowValid) {
       Debug.WriteLine("Invalid Window", "Area.CommonAreaSelect");
       return;
@@ -540,5 +543,7 @@ public partial class Area : UserControl, IBindingProfile {
     // current以外のデータを表示する必要はない
     this.OnCurrentLayoutElementChanged();
   }
+
+  public EventHandler OnDragHereSetTargetWindow;
 }
 }   // namespace SCFF.GUI.Controls
